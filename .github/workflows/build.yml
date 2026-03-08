@@ -1,6 +1,8 @@
 name: Build & Patch Tailscale IPA
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       new_bundle_id:
@@ -36,12 +38,21 @@ jobs:
           DEB=$(ls packages/*.deb | head -1)
           echo "Built deb: $DEB"
           mkdir -p extracted_deb
-          # macOS ar doesn't support --output; use subshell to cd safely
           DEB_ABS=$(realpath "$DEB")
           (cd extracted_deb && ar x "$DEB_ABS")
+          echo "Contents of extracted_deb:"
+          ls extracted_deb/
+          # Extract the full data archive (format may be .tar.lzma, .tar.xz, .tar.zst, etc.)
           DATA=$(ls extracted_deb/data.tar.* 2>/dev/null | head -1)
-          tar -xf "$DATA" -C extracted_deb --wildcards "*.dylib" 2>/dev/null || true
+          echo "Data archive: $DATA"
+          tar -xf "$DATA" -C extracted_deb 2>/dev/null || true
+          echo "Looking for Bypass.dylib..."
+          find extracted_deb -type f | sort
           DYLIB=$(find extracted_deb -name "Bypass.dylib" | head -1)
+          if [ -z "$DYLIB" ]; then
+            echo "ERROR: Bypass.dylib not found after extraction"
+            exit 1
+          fi
           echo "Found dylib: $DYLIB"
           cp "$DYLIB" Bypass.dylib
           echo "Dylib ready at $(pwd)/Bypass.dylib"
@@ -54,16 +65,16 @@ jobs:
           chmod +x optool_bin/optool
           echo "OPTOOL=$(pwd)/optool_bin/optool" >> $GITHUB_ENV
 
-      # ── Download IPA from release asset or secret URL ────────────────────────
-      # Option A: commit the IPA to the repo under ipa/ (if small enough)
-      # Option B: store a download URL in a GitHub secret IPA_URL
+      # ── Obtain IPA ───────────────────────────────────────────────────────────
+      # Option A: store a download URL in a GitHub secret named IPA_URL
+      # Option B: commit the IPA to the repo under an ipa/ folder
       - name: Obtain IPA
         run: |
           if [ -n "${{ secrets.IPA_URL }}" ]; then
             echo "Downloading IPA from secret URL..."
             curl -sSL "${{ secrets.IPA_URL }}" -o input.ipa
-          elif [ -f ipa/*.ipa ]; then
-            cp ipa/*.ipa input.ipa
+          elif ls ipa/*.ipa 2>/dev/null | head -1 | grep -q .; then
+            cp "$(ls ipa/*.ipa | head -1)" input.ipa
           else
             echo "No IPA found. Add it to ipa/ folder or set IPA_URL secret."
             exit 1
