@@ -64,39 +64,83 @@ jobs:
           chmod +x optool_bin/optool
           echo "OPTOOL=$(pwd)/optool_bin/optool" >> $GITHUB_ENV
 
-      # ── Obtain IPA ───────────────────────────────────────────────────────────
-      - name: Obtain IPA
+      # ── Patch iOS 14 IPA ─────────────────────────────────────────────────────
+      - name: Patch iOS 14 IPA
         run: |
-          if [ -n "${{ secrets.IPA_URL }}" ]; then
-            echo "Downloading IPA from secret URL..."
-            curl -sSL "${{ secrets.IPA_URL }}" -o input.ipa
-          elif ls ipa/*.ipa 2>/dev/null | head -1 | grep -q .; then
-            cp "$(ls ipa/*.ipa | head -1)" input.ipa
-          else
-            echo "No IPA found. Add it to ipa/ folder or set IPA_URL secret."
-            exit 1
-          fi
-          ls -lh input.ipa
-
-      # ── Patch IPA ────────────────────────────────────────────────────────────
-      - name: Patch IPA
-        run: |
-          python3 patch_ipa.py input.ipa \
+          IPA=$(ls ipa/ios14/*.ipa | head -1)
+          echo "Patching iOS 14: $IPA"
+          python3 patch_ipa.py "$IPA" \
             --new-id "$NEW_BUNDLE_ID" \
             --dylib "Bypass.dylib" \
             --inject-tool "$OPTOOL" \
             --keep-plugins \
-            --output "Tailscale_TrollStore.ipa"
+            --output "Tailscale_iOS14_TrollStore.ipa"
+
+      # ── Patch iOS 15 IPA ─────────────────────────────────────────────────────
+      - name: Patch iOS 15 IPA
+        run: |
+          IPA=$(ls ipa/ios15/*.ipa | head -1)
+          echo "Patching iOS 15: $IPA"
+          python3 patch_ipa.py "$IPA" \
+            --new-id "$NEW_BUNDLE_ID" \
+            --dylib "Bypass.dylib" \
+            --inject-tool "$OPTOOL" \
+            --keep-plugins \
+            --output "Tailscale_iOS15_TrollStore.ipa"
 
       # ── Upload artifacts ─────────────────────────────────────────────────────
-      - name: Upload patched IPA
+      - name: Upload iOS 14 IPA
         uses: actions/upload-artifact@v4
         with:
-          name: Tailscale_TrollStore
-          path: Tailscale_TrollStore.ipa
+          name: Tailscale_iOS14_TrollStore
+          path: Tailscale_iOS14_TrollStore.ipa
+
+      - name: Upload iOS 15 IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tailscale_iOS15_TrollStore
+          path: Tailscale_iOS15_TrollStore.ipa
 
       - name: Upload Bypass.dylib
         uses: actions/upload-artifact@v4
         with:
           name: Bypass-dylib
           path: Bypass.dylib
+
+      # ── Create GitHub Release ────────────────────────────────────────────────
+      - name: Get version tags
+        id: versions
+        run: |
+          IOS14_VER=$(ls ipa/ios14/*.ipa | head -1 | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' | head -1)
+          IOS15_VER=$(ls ipa/ios15/*.ipa | head -1 | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' | head -1)
+          DATE=$(date +%Y%m%d%H%M)
+          echo "ios14_ver=$IOS14_VER" >> $GITHUB_OUTPUT
+          echo "ios15_ver=$IOS15_VER" >> $GITHUB_OUTPUT
+          echo "tag=v${DATE}" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.versions.outputs.tag }}
+          name: "Tailscale TrollStore Patch (${{ steps.versions.outputs.tag }})"
+          body: |
+            ## Tailscale — TrollStore patched builds
+
+            Bundle ID changed to `${{ env.NEW_BUNDLE_ID }}` so it coexists with the original Tailscale app.
+
+            | File | Version | Target |
+            |------|---------|--------|
+            | `Tailscale_iOS14_TrollStore.ipa` | ${{ steps.versions.outputs.ios14_ver }} | iOS 14 |
+            | `Tailscale_iOS15_TrollStore.ipa` | ${{ steps.versions.outputs.ios15_ver }} | iOS 15 |
+
+            ### Install
+            1. Download the IPA for your iOS version
+            2. Open with TrollStore on your device
+          files: |
+            Tailscale_iOS14_TrollStore.ipa
+            Tailscale_iOS15_TrollStore.ipa
+            Bypass.dylib
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
