@@ -42,7 +42,6 @@ jobs:
           (cd extracted_deb && ar x "$DEB_ABS")
           echo "Contents of extracted_deb:"
           ls extracted_deb/
-          # Extract the full data archive (format may be .tar.lzma, .tar.xz, .tar.zst, etc.)
           DATA=$(ls extracted_deb/data.tar.* 2>/dev/null | head -1)
           echo "Data archive: $DATA"
           tar -xf "$DATA" -C extracted_deb 2>/dev/null || true
@@ -66,8 +65,6 @@ jobs:
           echo "OPTOOL=$(pwd)/optool_bin/optool" >> $GITHUB_ENV
 
       # ── Obtain IPA ───────────────────────────────────────────────────────────
-      # Option A: store a download URL in a GitHub secret named IPA_URL
-      # Option B: commit the IPA to the repo under an ipa/ folder
       - name: Obtain IPA
         run: |
           if [ -n "${{ secrets.IPA_URL }}" ]; then
@@ -88,6 +85,7 @@ jobs:
             --new-id "$NEW_BUNDLE_ID" \
             --dylib "Bypass.dylib" \
             --inject-tool "$OPTOOL" \
+            --keep-plugins \
             --output "Tailscale_TrollStore.ipa"
 
       # ── Upload artifacts ─────────────────────────────────────────────────────

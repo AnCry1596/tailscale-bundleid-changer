@@ -4,11 +4,13 @@ patch_ipa.py
   1. Unzip IPA
   2. Remove iOS-16+ extensions (widgets etc.)
   3. Patch ALL bundle ID references in every Info.plist
+     — EXCEPT the Network Extension, which keeps the original bundle ID
+       so the system resolves the already-provisioned VPN tunnel from
+       the original Tailscale install.
   4. Inject Bypass.dylib via LC_LOAD_DYLIB (optool or insert_dylib)
   5. Rezip → ready for TrollStore
 """
 
-import os
 import sys
 import shutil
 import zipfile
@@ -17,20 +19,19 @@ import argparse
 import subprocess
 from pathlib import Path
 
-# ── plist keys that carry bundle IDs ─────────────────────────────────────────
-BUNDLE_ID_KEYS = [
-    "CFBundleIdentifier",
-    "WKAppBundleIdentifier",
-    "WKCompanionAppBundleIdentifier",
-    "NSExtension.NSExtensionAttributes.WKAppBundleIdentifier",
-]
-
 # Extensions to always remove (require iOS 16+ or cause crashes)
 DEFAULT_REMOVE_PLUGINS = [
     "IPN-Widgets.appex",
     "IPN-iOS-Extension.appex",
     "IPN-tvOS-Extension.appex",
     "IPN-macOS-Extension.appex",
+]
+
+# Network Extension plugins — keep their bundle IDs as the ORIGINAL (real) ID.
+# The VPN tunnel needs to resolve the extension provisioned by the original
+# App Store / TrollStore install of Tailscale.
+NE_PLUGINS = [
+    "IPNExtension.appex",
 ]
 
 # ── helpers ───────────────────────────────────────────────────────────────────
@@ -43,7 +44,7 @@ def find_app_dir(payload_dir: Path) -> Path:
 
 
 def replace_in_value(value, old: str, new: str):
-    """Recursively replace old bundle ID prefix inside plist value."""
+    """Recursively replace old bundle ID prefix inside a plist value."""
     if isinstance(value, str):
         if value == old:
             return new
@@ -55,6 +56,14 @@ def replace_in_value(value, old: str, new: str):
     if isinstance(value, list):
         return [replace_in_value(i, old, new) for i in value]
     return value
+
+
+def is_inside_ne(plist_path: Path) -> bool:
+    """Return True if this plist lives inside a Network Extension .appex."""
+    for parent in plist_path.parents:
+        if parent.suffix == ".appex" and parent.name in NE_PLUGINS:
+            return True
+    return False
 
 
 def patch_plist(plist_path: Path, old_id: str, new_id: str) -> bool:
@@ -75,26 +84,22 @@ def patch_plist(plist_path: Path, old_id: str, new_id: str) -> bool:
     return True
 
 
-def inject_dylib(binary_path: Path, dylib_dest_path: str, tool: str):
-    """
-    Inject dylib load command into Mach-O binary.
-    tool: path to 'optool' or 'insert_dylib'
-    """
+def inject_dylib(binary_path: Path, dylib_load_path: str, tool: str):
     if not Path(tool).exists() and shutil.which(tool) is None:
         print(f"  [warn] injection tool not found: {tool} — skipping dylib injection")
         return False
 
     tool_name = Path(tool).stem
     if tool_name == "optool":
-        cmd = [tool, "install", "-c", "load", "-p", dylib_dest_path, "-t", str(binary_path)]
-    else:  # insert_dylib
-        cmd = [tool, "--inplace", "--all-yes", dylib_dest_path, str(binary_path)]
+        cmd = [tool, "install", "-c", "load", "-p", dylib_load_path, "-t", str(binary_path)]
+    else:
+        cmd = [tool, "--inplace", "--all-yes", dylib_load_path, str(binary_path)]
 
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
         print(f"  [error] dylib injection failed:\n{result.stderr}")
         return False
-    print(f"  [injected] {dylib_dest_path} → {binary_path.name}")
+    print(f"  [injected] {dylib_load_path} → {binary_path.name}")
     return True
 
 
@@ -106,11 +111,11 @@ def main():
     parser.add_argument("--new-id", default="annnekkk.modified.tailscale",
                         help="New bundle ID (default: annnekkk.modified.tailscale)")
     parser.add_argument("--dylib", default="",
-                        help="Path to Bypass.dylib to inject (skip if not provided)")
+                        help="Path to Bypass.dylib to inject")
     parser.add_argument("--inject-tool", default="optool",
-                        help="Injection tool binary: optool or insert_dylib (default: optool)")
+                        help="Injection tool: optool or insert_dylib (default: optool)")
     parser.add_argument("--keep-plugins", action="store_true",
-                        help="Do not remove any PlugIns (keep all extensions)")
+                        help="Do not remove any PlugIns")
     parser.add_argument("--output", default="",
                         help="Output .ipa path (default: <stem>_patched.ipa)")
     args = parser.parse_args()
@@ -144,8 +149,12 @@ def main():
     print(f"      Old bundle ID: {old_id}")
     print(f"      New bundle ID: {new_id}")
 
-    # ── 2. Remove iOS-16+ plugins ─────────────────────────────────────────────
+    # Print what NE plugins exist so we know their actual names
     plugins_dir = app_dir / "PlugIns"
+    if plugins_dir.exists():
+        print(f"      Plugins found: {[p.name for p in plugins_dir.iterdir()]}")
+
+    # ── 2. Remove iOS-16+ plugins ─────────────────────────────────────────────
     if not args.keep_plugins and plugins_dir.exists():
         print(f"\n[2/5] Removing incompatible PlugIns ...")
         for name in DEFAULT_REMOVE_PLUGINS:
@@ -156,15 +165,13 @@ def main():
     else:
         print(f"\n[2/5] Skipping plugin removal.")
 
-    # ── 3. Patch all Info.plists ──────────────────────────────────────────────
+    # ── 3. Patch all Info.plists (skip Network Extension) ────────────────────
     print(f"\n[3/5] Patching Info.plist files ...")
-    for plist_path in app_dir.rglob("Info.plist"):
-        patch_plist(plist_path, old_id, new_id)
-
-    # Also patch any embedded .plist files that might reference the bundle ID
     for plist_path in app_dir.rglob("*.plist"):
-        if plist_path.name != "Info.plist":
-            patch_plist(plist_path, old_id, new_id)
+        if is_inside_ne(plist_path):
+            print(f"  [skip NE]  {plist_path.relative_to(app_dir)}")
+            continue
+        patch_plist(plist_path, old_id, new_id)
 
     # ── 4. Inject dylib ───────────────────────────────────────────────────────
     print(f"\n[4/5] Dylib injection ...")
@@ -173,16 +180,12 @@ def main():
         if not dylib_src.exists():
             print(f"  [warn] dylib not found at {dylib_src} — skipping injection")
         else:
-            # Copy dylib into app bundle
             dylib_dest = app_dir / "Frameworks" / dylib_src.name
             dylib_dest.parent.mkdir(exist_ok=True)
             shutil.copy2(dylib_src, dylib_dest)
             print(f"  [copied] {dylib_src.name} → Frameworks/")
 
-            # The @rpath load path TrollStore will see
             dylib_load_path = f"@executable_path/Frameworks/{dylib_src.name}"
-
-            # Find main executable
             exe_name = main_plist.get("CFBundleExecutable", app_dir.stem)
             exe_path = app_dir / exe_name
             if not exe_path.exists():
@@ -198,7 +201,6 @@ def main():
         for file_path in sorted(work_dir.rglob("*")):
             if file_path.is_file():
                 arcname = file_path.relative_to(work_dir)
-                # Preserve executable permission via external_attr
                 zi = zipfile.ZipInfo(str(arcname))
                 zi.compress_type = zipfile.ZIP_DEFLATED
                 st = file_path.stat()
@@ -207,7 +209,6 @@ def main():
                     zf.writestr(zi, f.read())
 
     shutil.rmtree(work_dir)
-
     print(f"\nDone! → {out_path}")
     print("Transfer to device and open with TrollStore.")
 
