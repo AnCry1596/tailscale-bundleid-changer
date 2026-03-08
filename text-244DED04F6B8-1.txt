@@ -1,0 +1,100 @@
+Incident Identifier: 4DBD9C12-D68B-4149-8556-75472A731340
+CrashReporter Key:   c5c04f261e71e7dc8e3f3e3c7f45024365de515f
+Hardware Model:      iPhone10,2
+Process:             Tailscale [1798]
+Path:                /private/var/containers/Bundle/Application/6C533F10-E55D-4362-8354-848AF534F576/Tailscale.app/Tailscale
+Identifier:          com.thuthuatjb.eVwgrPwj2V
+Version:             1.94.2 (101.94.2)
+AppStoreTools:       17C503a
+Code Type:           ARM-64 (Native)
+Role:                Foreground
+Parent Process:      launchd [1]
+Coalition:           com.thuthuatjb.eVwgrPwj2V [1044]
+
+Date/Time:           2026-03-05 18:42:42.3407 +0700
+Launch Time:         2026-03-05 18:42:42.1616 +0700
+OS Version:          iPhone OS 15.6 (19G69)
+Release Type:        User
+Baseband Version:    7.61.00
+Report Version:      104
+
+Exception Type:  EXC_BREAKPOINT (SIGTRAP)
+Exception Codes: 0x0000000000000001, 0x0000000184eb5fd0
+Exception Note:  EXC_CORPSE_NOTIFY
+Termination Reason: SIGNAL 5 Trace/BPT trap: 5
+Terminating Process: exc handler [1798]
+
+Triggered by Thread:  0
+
+Thread 0 name:   Dispatch queue: com.apple.main-thread
+Thread 0 Crashed:
+0   libswiftCore.dylib            	       0x184eb5fd0 _assertionFailure(_:_:file:line:flags:) + 304
+1   libswiftCore.dylib            	       0x184eb5fd0 _assertionFailure(_:_:file:line:flags:) + 304
+2   Tailscale                     	       0x104a749f4 0x1048ec000 + 1608180
+3   Tailscale                     	       0x104996fc8 0x1048ec000 + 700360
+4   Tailscale                     	       0x104997858 0x1048ec000 + 702552
+5   Tailscale                     	       0x1049967e8 0x1048ec000 + 698344
+6   Tailscale                     	       0x1049b31e4 0x1048ec000 + 815588
+7   Tailscale                     	       0x104a44f08 0x1048ec000 + 1412872
+8   Tailscale                     	       0x10499d204 0x1048ec000 + 725508
+9   UIKitCore                     	       0x183895110 _UIApplicationMainPreparations + 1772
+10  UIKitCore                     	       0x182c7dfb8 UIApplicationMain + 308
+11  Tailscale                     	       0x10499de44 0x1048ec000 + 728644
+12  dyld                          	       0x104d984d0 start + 444
+
+Thread 1:
+0   libsystem_pthread.dylib       	       0x1dbaac934 start_wqthread + 0
+
+Thread 2:
+0   libsystem_pthread.dylib       	       0x1dbaac934 start_wqthread + 0
+
+Thread 3:
+0   libsystem_pthread.dylib       	       0x1dbaac934 start_wqthread + 0
+
+Thread 4 name:  com.apple.uikit.eventfetch-thread
+Thread 4:
+0   libsystem_kernel.dylib        	       0x1bb024aac mach_msg_trap + 8
+1   libsystem_kernel.dylib        	       0x1bb02507c mach_msg + 72
+2   CoreFoundation                	       0x1806cbd88 __CFRunLoopServiceMachPort + 368
+3   CoreFoundation                	       0x1806d0090 __CFRunLoopRun + 1160
+4   CoreFoundation                	       0x1806e3250 CFRunLoopRunSpecific + 572
+5   Foundation                    	       0x181df1eec -[NSRunLoop(NSRunLoop) runMode:beforeDate:] + 232
+6   Foundation                    	       0x181e31000 -[NSRunLoop(NSRunLoop) runUntilDate:] + 88
+7   UIKitCore                     	       0x182e63f00 -[UIEventFetcher threadMain] + 512
+8   Foundation                    	       0x181e3ebfc __NSThread__start__ + 792
+9   libsystem_pthread.dylib       	       0x1dbaae348 _pthread_start + 116
+10  libsystem_pthread.dylib       	       0x1dbaac948 thread_start + 8
+
+Thread 5:
+0   libsystem_pthread.dylib       	       0x1dbaac934 start_wqthread + 0
+
+Thread 6:
+0   libsystem_pthread.dylib       	       0x1dbaac934 start_wqthread + 0
+
+Thread 7:
+0   libsystem_pthread.dylib       	       0x1dbaac934 start_wqthread + 0
+
+
+Thread 0 crashed with ARM Thread State (64-bit):
+    x0: 0x8000000104ae7e30   x1: 0x0000000282aa00f0   x2: 0x0000000000000004   x3: 0x0000000191959de0
+    x4: 0x0000000000000000   x5: 0x000000016b512310   x6: 0x0000000000000079   x7: 0x0000000000000001
+    x8: 0x00000000000000cb   x9: 0x0000000080863ffb  x10: 0x00000000000007fb  x11: 0x00000000000007fd
+   x12: 0x0000000000000004  x13: 0x0000000080863ffb  x14: 0x0000000080a64000  x15: 0x00000000000000c8
+   x16: 0x0000000080000000  x17: 0x0000000000a00000  x18: 0x0000000000000000  x19: 0x8000000104ae7e30
+   x20: 0x0000000000000002  x21: 0x0000000000000029  x22: 0x0000000000000021  x23: 0x0000000104ae7e20
+   x24: 0xd000000000000037  x25: 0x0000000104ae0ff0  x26: 0x000000000000000b  x27: 0xd000000000000016
+   x28: 0x0000000000000000   fp: 0x000000016b512420   lr: 0x0000000184eb5fd0
+    sp: 0x000000016b5123a0   pc: 0x0000000184eb5fd0 cpsr: 0x60000000
+   far: 0x0000000000000000  esr: 0xf2000001 (Breakpoint) brk 1
+
+Binary Images:
+       0x184e84000 -        0x1852e1fff libswiftCore.dylib arm64  <e79e774777483d80be8f69f3e341d73b> /usr/lib/swift/libswiftCore.dylib
+       0x1048ec000 -        0x104b6ffff Tailscale arm64  <76026eeb9c463e1d992f219f34da3687> /private/var/containers/Bundle/Application/6C533F10-E55D-4362-8354-848AF534F576/Tailscale.app/Tailscale
+       0x1829ff000 -        0x18419afff UIKitCore arm64  <c53f61024f393af2bc7071923fd99a67> /System/Library/PrivateFrameworks/UIKitCore.framework/UIKitCore
+       0x104d7c000 -        0x104ddbfff dyld arm64  <444f5041322e342e3700cc49f96b9bee> /private/preboot/CC9D67100099A71F9E6862ADCF08A253FC131B7946B0138FF42942605DFDC2C1E12590F9A099F86BD03DA9F4963D0F20/dopamine-RRgvY9/procursus/basebin/gen/dyld
+       0x1dbaab000 -        0x1dbabbfff libsystem_pthread.dylib arm64  <363cc4a2ee893116b5e7df36982aae18> /usr/lib/system/libsystem_pthread.dylib
+       0x1bb024000 -        0x1bb057fff libsystem_kernel.dylib arm64  <7d639422feb935a9ab63a4bc6e8c7d13> /usr/lib/system/libsystem_kernel.dylib
+       0x1806c5000 -        0x180b02fff CoreFoundation arm64  <55a96cfe31413f568ab1569c607b9370> /System/Library/Frameworks/CoreFoundation.framework/CoreFoundation
+       0x181dda000 -        0x1820befff Foundation arm64  <3fe3654abb333073a53a563ff81c1dd0> /System/Library/Frameworks/Foundation.framework/Foundation
+
+EOF

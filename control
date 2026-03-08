@@ -1,0 +1,9 @@
+Package: annnekkk.bypass
+Name: Bypass
+Version: 1.0.0
+Architecture: iphoneos-arm64
+Description: Spoofs bundle identifier for modified Tailscale IPA
+Maintainer: annnekkk
+Author: annnekkk
+Section: Tweaks
+Depends: mobilesubstrate

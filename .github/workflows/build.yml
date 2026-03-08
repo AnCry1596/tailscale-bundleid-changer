@@ -1,0 +1,94 @@
+name: Build & Patch Tailscale IPA
+
+on:
+  workflow_dispatch:
+    inputs:
+      new_bundle_id:
+        description: "New bundle ID"
+        required: false
+        default: "annnekkk.modified.tailscale"
+
+jobs:
+  build:
+    runs-on: macos-13
+
+    env:
+      THEOS: ${{ github.workspace }}/theos
+      NEW_BUNDLE_ID: ${{ github.event.inputs.new_bundle_id || 'annnekkk.modified.tailscale' }}
+
+    steps:
+      # ── Checkout ────────────────────────────────────────────────────────────
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      # ── Install Theos ────────────────────────────────────────────────────────
+      - name: Install Theos
+        run: |
+          bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)" \
+            -- --no-toolchain 2>&1 | tail -5
+          echo "Theos installed at $THEOS"
+
+      # ── Build Bypass.dylib ──────────────────────────────────────────────────
+      - name: Build Bypass.dylib
+        run: |
+          make package FINALPACKAGE=1 2>&1
+          # Extract the .dylib from the built .deb into a fixed output path
+          DEB=$(ls packages/*.deb | head -1)
+          echo "Built deb: $DEB"
+          mkdir -p extracted_deb
+          cd extracted_deb && ar x "../$DEB"
+          DATA=$(ls data.tar.* 2>/dev/null | head -1)
+          tar -xf "$DATA" --wildcards "*.dylib" --strip-components=0 2>/dev/null || true
+          DYLIB=$(find . -name "Bypass.dylib" | head -1)
+          if [ -z "$DYLIB" ]; then
+            DYLIB=$(find ../packages -name "*.dylib" | head -1)
+          fi
+          # Copy to a fixed known location so later steps and artifact upload can reference it
+          cp "$(realpath $DYLIB)" "${{ github.workspace }}/Bypass.dylib"
+          echo "Dylib copied to ${{ github.workspace }}/Bypass.dylib"
+
+      # ── Install optool ───────────────────────────────────────────────────────
+      - name: Install optool
+        run: |
+          curl -sSL https://github.com/alexzielenski/optool/releases/download/0.1/optool.zip -o optool.zip
+          unzip -q optool.zip -d optool_bin
+          chmod +x optool_bin/optool
+          echo "OPTOOL=$(pwd)/optool_bin/optool" >> $GITHUB_ENV
+
+      # ── Download IPA from release asset or secret URL ────────────────────────
+      # Option A: commit the IPA to the repo under ipa/ (if small enough)
+      # Option B: store a download URL in a GitHub secret IPA_URL
+      - name: Obtain IPA
+        run: |
+          if [ -n "${{ secrets.IPA_URL }}" ]; then
+            echo "Downloading IPA from secret URL..."
+            curl -sSL "${{ secrets.IPA_URL }}" -o input.ipa
+          elif [ -f ipa/*.ipa ]; then
+            cp ipa/*.ipa input.ipa
+          else
+            echo "No IPA found. Add it to ipa/ folder or set IPA_URL secret."
+            exit 1
+          fi
+          ls -lh input.ipa
+
+      # ── Patch IPA ────────────────────────────────────────────────────────────
+      - name: Patch IPA
+        run: |
+          python3 patch_ipa.py input.ipa \
+            --new-id "$NEW_BUNDLE_ID" \
+            --dylib "${{ github.workspace }}/Bypass.dylib" \
+            --inject-tool "$OPTOOL" \
+            --output "Tailscale_TrollStore.ipa"
+
+      # ── Upload artifacts ─────────────────────────────────────────────────────
+      - name: Upload patched IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tailscale_TrollStore
+          path: Tailscale_TrollStore.ipa
+
+      - name: Upload Bypass.dylib
+        uses: actions/upload-artifact@v4
+        with:
+          name: Bypass-dylib
+          path: Bypass.dylib

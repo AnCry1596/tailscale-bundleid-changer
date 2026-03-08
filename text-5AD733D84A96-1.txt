@@ -1,0 +1,55 @@
+Incident Identifier: 82E69062-0DA6-4A06-BF0D-E42EC1AAE7E1
+CrashReporter Key:   c5c04f261e71e7dc8e3f3e3c7f45024365de515f
+Hardware Model:      iPhone10,2
+Process:             IPN-Widgets [1256]
+Path:                /private/var/containers/Bundle/Application/6C533F10-E55D-4362-8354-848AF534F576/Tailscale.app/PlugIns/IPN-Widgets.appex/IPN-Widgets
+Identifier:          com.thuthuatjb.eVwgrPwj2V.widgets
+Version:             1.94.2 (101.94.2)
+Code Type:           ARM-64 (Native)
+Role:                Foreground
+Parent Process:      launchd [1]
+Coalition:           com.thuthuatjb.eVwgrPwj2V.widgets [1037]
+
+Date/Time:           2026-03-05 17:56:36.2267 +0700
+Launch Time:         2026-03-05 17:56:36.2218 +0700
+OS Version:          iPhone OS 15.6 (19G69)
+Release Type:        User
+Baseband Version:    7.61.00
+Report Version:      104
+
+Exception Type:  EXC_CRASH (SIGABRT)
+Exception Codes: 0x0000000000000000, 0x0000000000000000
+Exception Note:  EXC_CORPSE_NOTIFY
+Termination Reason: DYLD 1 Library missing
+Library not loaded: '/System/Library/Frameworks/AppIntents.framework/AppIntents'
+Referenced from: '/Volumes/VOLUME/*/Tailscale.app/PlugIns/IPN-Widgets.appex/IPN-Widgets'
+Reason: tried: '/System/Library/Frameworks/AppIntents.framework/AppIntents' (no such file)
+(terminated at launch; ignore backtrace)
+
+Triggered by Thread:  0
+
+Thread 0 Crashed:
+0   dyld                          	       0x102a6f2cc __abort_with_payload + 8
+1   dyld                          	       0x102a746dc abort_with_payload_wrapper_internal + 100
+2   dyld                          	       0x102a7470c abort_with_payload + 12
+3   dyld                          	       0x102a48aa8 dyld4::halt(char const*) + 576
+4   dyld                          	       0x102a45e44 dyld4::prepare(dyld4::APIs&, dyld3::MachOAnalyzer const*) + 3108
+5   dyld                          	       0x102a444b0 start + 412
+
+
+Thread 0 crashed with ARM Thread State (64-bit):
+    x0: 0x0000000000000006   x1: 0x0000000000000001   x2: 0x000000016d53ec78   x3: 0x00000000000000d3
+    x4: 0x000000016d53e878   x5: 0x0000000000000000   x6: 0x0000000000000000   x7: 0x0000000000000e50
+    x8: 0x0000000000000020   x9: 0x0000000000000009  x10: 0x000000016d53e974  x11: 0x0000000000000136
+   x12: 0x69572d4e50492f73  x13: 0x70612e7374656764  x14: 0x2d4e50492f786570  x15: 0x0073746567646957
+   x16: 0x0000000000000209  x17: 0x00000000000fd610  x18: 0x0000000000000000  x19: 0x0000000000000000
+   x20: 0x000000016d53e878  x21: 0x00000000000000d3  x22: 0x000000016d53ec78  x23: 0x0000000000000001
+   x24: 0x0000000000000006  x25: 0x000000016d53e878  x26: 0x0000000000000400  x27: 0x0000000000000400
+   x28: 0x00000000000000fc   fp: 0x000000016d53e840   lr: 0x0000000102a746dc
+    sp: 0x000000016d53e800   pc: 0x0000000102a6f2cc cpsr: 0x00000000
+   far: 0x0000000102988000  esr: 0x56000080  Address size fault
+
+Binary Images:
+       0x102a28000 -        0x102a87fff dyld arm64  <444f5041322e342e3700cc49f96b9bee> /private/preboot/CC9D67100099A71F9E6862ADCF08A253FC131B7946B0138FF42942605DFDC2C1E12590F9A099F86BD03DA9F4963D0F20/dopamine-RRgvY9/procursus/basebin/gen/dyld
+
+EOF
