@@ -36,8 +36,9 @@ jobs:
           DEB=$(ls packages/*.deb | head -1)
           echo "Built deb: $DEB"
           mkdir -p extracted_deb
-          # ar and tar without cd — stay in workspace root
-          ar x "$DEB" --output extracted_deb
+          # macOS ar doesn't support --output; use subshell to cd safely
+          DEB_ABS=$(realpath "$DEB")
+          (cd extracted_deb && ar x "$DEB_ABS")
           DATA=$(ls extracted_deb/data.tar.* 2>/dev/null | head -1)
           tar -xf "$DATA" -C extracted_deb --wildcards "*.dylib" 2>/dev/null || true
           DYLIB=$(find extracted_deb -name "Bypass.dylib" | head -1)
