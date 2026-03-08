@@ -39,6 +39,14 @@ static NSString *spoof(NSString *s) {
     return val;
 }
 
+// Hook the underlying plist dictionary directly
+- (id)objectForKey:(NSString *)key inTable:(NSString *)table {
+    id val = %orig;
+    if ([key isEqualToString:@"CFBundleIdentifier"] && [val isKindOfClass:[NSString class]])
+        return spoof(val);
+    return val;
+}
+
 %end
 
 // ── NSUserDefaults (App Groups) ───────────────────────────────────────────────
@@ -62,11 +70,20 @@ static CFStringRef replaced_CFBundleGetIdentifier(CFBundleRef bundle) {
     return (__bridge CFStringRef)spoofed;
 }
 
-%ctor {
-    // MSHookFunction is available directly from substrate.h — no dlopen needed
+// ── Early init via __attribute__((constructor)) ───────────────────────────────
+// This runs before %ctor (which runs at +load time) ensuring CFBundle
+// is hooked as early as possible — before any Swift static initializers fire.
+
+__attribute__((constructor))
+static void earlyInit(void) {
     MSHookFunction(
         (void *)CFBundleGetIdentifier,
         (void *)replaced_CFBundleGetIdentifier,
         (void **)&orig_CFBundleGetIdentifier
     );
+}
+
+%ctor {
+    // %ctor runs after earlyInit; NSBundle hooks are registered automatically
+    // by the Logos %hook machinery at dylib load time, nothing extra needed here.
 }
