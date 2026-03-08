@@ -23,9 +23,10 @@ jobs:
 
       # ── Install Theos ────────────────────────────────────────────────────────
       - name: Install Theos
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)" \
-            -- --no-toolchain 2>&1 | tail -5
+          bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
           echo "Theos installed at $THEOS"
 
       # ── Build Bypass.dylib ──────────────────────────────────────────────────
